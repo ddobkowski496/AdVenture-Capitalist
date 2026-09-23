@@ -8,6 +8,9 @@
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000;
         }
+        #gameContainer {
+            width: 100%; height: 100%; margin: 0; padding: 0;
+        }
         iframe {
             width: 100%; height: 100%; border: none;
         }
@@ -27,8 +30,10 @@
 </head>
 <body>
 
-    <!-- CHANGE 'adventure-capitalist.html' TO THE EXACT NAME OF YOUR ADVENTURE CAPITALIST FILE -->
-    <iframe src="adventure-capitalist.html"></iframe>
+    <!-- Container that holds the game window -->
+    <div id="gameContainer">
+        <iframe id="gameFrame" src="adventure-capitalist.html"></iframe>
+    </div>
 
     <!-- Floating Save/Load Overlay -->
     <div id="saveMenu">
@@ -40,11 +45,10 @@
     <script>
         // === EXPORT FEATURE ===
         document.getElementById('exportSave').addEventListener('click', () => {
-            // Gathers ALL offline data stored by Adventure Capitalist instantly
             const allData = JSON.stringify(localStorage);
             
             if (allData === '{}') {
-                alert('No save data found to export! Play a game first.');
+                alert('No save data found to export! Buy some businesses first.');
                 return;
             }
 
@@ -77,16 +81,26 @@
                 try {
                     const backup = JSON.parse(evt.target.result);
                     
-                    // Clear out existing browser data safely 
+                    // 1. Force kill the active game frame instantly by clearing its HTML
+                    const container = document.getElementById('gameContainer');
+                    container.innerHTML = ''; 
+                    
+                    // 2. Clear out existing browser data safely now that the loop is dead
                     localStorage.clear();
                     
-                    // Repopulate with the imported game file
+                    // 3. Repopulate with the imported game file metrics
                     for (const key in backup) {
                         localStorage.setItem(key, backup[key]);
                     }
                     
-                    alert('Save loaded! Reloading game...');
-                    window.location.reload();
+                    alert('Save injected perfectly! Rebuilding game memory cells...');
+                    
+                    // 4. Clean reload: Create a completely brand new iframe from scratch
+                    const newIframe = document.createElement('iframe');
+                    newIframe.id = 'gameFrame';
+                    newIframe.src = 'adventure-capitalist.html';
+                    container.appendChild(newIframe);
+                    
                 } catch (err) {
                     alert('Error: This file is not a valid Adventure Capitalist save package.');
                 }
