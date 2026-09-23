@@ -2,93 +2,259 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Adventure Capitalist Launcher</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Games Dashboard</title>
     <style>
+        :root {
+            --bg-color: #0c0f12;
+            --card-bg: #161b22;
+            --accent-color: #00ff88;
+            --accent-gold: #d4af37;
+            --text-color: #ffffff;
+            --text-muted: #8b949e;
+        }
+
         body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
         }
+
+        /* Split layout: Sidebar left, Game View right */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: var(--card-bg);
+            border-right: 1px solid #30363d;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        .sidebar h1 {
+            font-size: 1.5rem; margin: 0 0 5px 0; letter-spacing: 0.5px;
+        }
+
+        .sidebar p {
+            color: var(--text-muted); font-size: 0.85rem; margin: 0 0 25px 0;
+        }
+
+        .game-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex-grow: 1;
+        }
+
+        .menu-item {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: var(--text-color);
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            border-color: var(--accent-color);
+            background: #28303d;
+            transform: translateX(3px);
+        }
+
+        /* Heavy Duty Sync Panel Utilities */
+        .sync-panel {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: auto;
+        }
+
+        .sync-panel h3 {
+            margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;
+        }
+
+        .sync-btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            transition: opacity 0.2s;
+        }
+
+        .sync-btn:hover { opacity: 0.9; }
+        #exportBtn { background: var(--accent-color); color: #000; }
+        #importBtn { background: #d4af37; color: #000; }
+
+        /* Absolute Game Viewer Frame Screen */
+        .game-viewport {
+            flex-grow: 1;
+            background: #000;
+            position: relative;
+        }
+
         iframe {
-            width: 100%; height: 100%; border: none;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
         }
-        /* Theme matched to Adventure Capitalist green/gold */
-        #saveMenu {
-            position: fixed; bottom: 15px; right: 15px; z-index: 99999;
-            background: rgba(18, 53, 36, 0.95); padding: 10px; border-radius: 8px;
-            border: 2px solid #d4af37; box-shadow: 0 0 15px rgba(0,0,0,0.7); font-family: Arial, sans-serif;
+
+        .no-game-prompt {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-muted);
         }
-        #saveMenu button {
-            background: #d4af37; color: #123524; border: none; padding: 8px 14px;
-            cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 4px; margin-left: 5px;
-            text-transform: uppercase; transition: background 0.2s;
-        }
-        #saveMenu button:hover { background: #f3cf55; }
     </style>
 </head>
 <body>
 
-    <!-- CHANGE 'adventure-capitalist.html' IF YOUR FILENAME IS DIFFERENT -->
-    <iframe src="adventure-capitalist.html"></iframe>
+    <div class="container">
+        <!-- Dashboard Sidebar Navigation & Save Manager Tools -->
+        <div class="sidebar">
+            <h1>Arcade Panel</h1>
+            <p>Unified Offline Save Controller</p>
+            
+            <div class="game-menu">
+                <button class="menu-item" onclick="loadGame('retro-bowl.html', this)">🏈 Retro Bowl</button>
+                <button class="menu-item" onclick="loadGame('adventure-capitalist.html', this)">💰 Adventure Capitalist</button>
+            </div>
 
-    <!-- Floating Save Panel -->
-    <div id="saveMenu">
-        <button id="exportSave">💰 Export Capital</button>
-        <button id="importSave">💼 Import Capital</button>
-        <input type="file" id="filePicker" style="display: none;" accept=".json">
+            <div class="sync-panel">
+                <h3>Save Management</h3>
+                <button id="exportBtn" class="sync-btn" onclick="exportActiveGameSave()">⬇️ Export Progress</button>
+                <button id="importBtn" class="sync-btn" onclick="triggerImportSelection()">⬆️ Import Progress</button>
+                <input type="file" id="dashboardFilePicker" style="display: none;" accept=".json" onchange="importActiveGameSave(this)">
+            </div>
+        </div>
+
+        <!-- Dynamic Game Viewer Window Frame -->
+        <div class="game-viewport" id="viewport">
+            <div class="no-game-prompt" id="prompt">
+                <h2>Welcome to Your Arcade</h2>
+                <p>Select a game from the sidebar engine to begin playing.</p>
+            </div>
+            <iframe id="gameFrame" src="" style="display: none;"></iframe>
+        </div>
     </div>
 
     <script>
-        // === EXPORT FEATURE ===
-        document.getElementById('exportSave').addEventListener('click', () => {
-            const allData = JSON.stringify(localStorage);
+        let currentActiveGame = "";
+
+        function loadGame(url, buttonElement) {
+            // Remove active classes
+            document.querySelectorAll('.menu-item').forEach(btn => btn.classList.remove('active'));
+            buttonElement.classList.add('active');
+
+            // Set up context tracking parameters
+            currentActiveGame = url;
+            document.getElementById('prompt').style.display = 'none';
             
-            if (allData === '{}') {
-                alert('No business progress found to export! Buy some lemons first.');
+            const iframe = document.getElementById('gameFrame');
+            iframe.style.display = 'block';
+            iframe.src = url;
+        }
+
+        // === GLOBAL SYNC SAVE EXTRACTION MODULE ===
+        function exportActiveGameSave() {
+            if (!currentActiveGame) {
+                alert("Please load a game from the selection menu before exporting.");
                 return;
             }
 
-            const blob = new Blob([allData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
+            const iframe = document.getElementById('gameFrame');
             
-            a.href = url;
-            a.download = 'adventure_capitalist_save.json';
-            document.body.appendChild(a);
-            a.click();
-            
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
+            try {
+                // Safely grab the absolute storage dictionary snapshot from the running frame
+                const frameLocalStorage = iframe.contentWindow.localStorage;
+                const saveDataString = JSON.stringify(frameLocalStorage);
 
-        // === IMPORT FEATURE ===
-        const filePicker = document.getElementById('filePicker');
-        
-        document.getElementById('importSave').addEventListener('click', () => {
-            filePicker.click();
-        });
+                if (saveDataString === '{}' || Object.keys(frameLocalStorage).length === 0) {
+                    alert("No save data found yet inside this session timeline. Play a bit first!");
+                    return;
+                }
 
-        filePicker.addEventListener('change', (e) => {
-            const file = e.target.files[0];
+                // Generate pure offline file artifact
+                const blob = new Blob([saveDataString], { type: 'application/json' });
+                const downloadUrl = URL.createObjectURL(blob);
+                const downloadAnchor = document.createElement('a');
+                
+                downloadAnchor.href = downloadUrl;
+                downloadAnchor.download = `${currentActiveGame.replace('.html', '')}_unblocked_save.json`;
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                
+                // Memory scrubbing cleanup
+                document.body.removeChild(downloadAnchor);
+                URL.revokeObjectURL(downloadUrl);
+            } catch (error) {
+                alert("Security block triggered. Remember to run your index.html file through a local web server (like VS Code Live Server) so the frame can share memory paths.");
+            }
+        }
+
+        function triggerImportSelection() {
+            if (!currentActiveGame) {
+                alert("Load your game choice before attempting to supply a backup profile.");
+                return;
+            }
+            document.getElementById('dashboardFilePicker').click();
+        }
+
+        // === ENGINE LOOP BYPASS CONTROLLER ===
+        function importActiveGameSave(fileInputElement) {
+            const file = fileInputElement.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(evt) {
+            reader.onload = function(event) {
                 try {
-                    const backup = JSON.parse(evt.target.result);
+                    const importedPayload = JSON.parse(event.target.result);
+                    const iframe = document.getElementById('gameFrame');
                     
-                    localStorage.clear();
+                    // 1. Flush the inner framework memory clean to break the active javascript numbers loop
+                    iframe.contentWindow.localStorage.clear();
                     
-                    for (const key in backup) {
-                        localStorage.setItem(key, backup[key]);
+                    // 2. Inject target numbers inside the raw backend layer directly
+                    for (const dictionaryKey in importedPayload) {
+                        iframe.contentWindow.localStorage.setItem(dictionaryKey, importedPayload[dictionaryKey]);
                     }
+
+                    alert("Data synchronized successfully into application cache layers! Purging runtime state variables...");
                     
-                    alert('Profits loaded! Restarting businesses...');
-                    window.location.reload();
-                } catch (err) {
-                    alert('Error: This is not a valid Adventure Capitalist save file.');
+                    // 3. HARD RESET: Force structural layout change to replace active execution paths instantly
+                    const preservedUrl = iframe.src;
+                    iframe.src = 'about:blank'; 
+                    setTimeout(() => {
+                        iframe.src = preservedUrl; // Re-instantiates layout cleanly with fresh memory metrics
+                    }, 50);
+
+                } catch (exception) {
+                    alert("Error processing import package configuration. Ensure structural integrity of your save JSON format.");
                 }
+                fileInputElement.value = ""; // Zero value register target tracking reset
             };
             reader.readAsText(file);
-        });
+        }
     </script>
 </body>
 </html>
