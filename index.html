@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ADVENTURE CAPITALIST</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1a1a1a; font-family: sans-serif;
+        }
+        iframe {
+            width: 100%; height: calc(100% - 60px); border: none; display: block;
+        }
+        /* Top Navigation Tool Belt */
+        #toolbar {
+            height: 60px; background: #2a2a2a; border-bottom: 2px solid #4caf50;
+            display: flex; align-items: center; justify-content: center; gap: 20px; box-sizing: border-box;
+        }
+        #toolbar button {
+            background: #4caf50; color: white; border: none; padding: 8px 16px;
+            font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s;
+        }
+        #toolbar button:hover { background: #45a049; }
+        #toolbar button.import-btn { background: #008cba; }
+        #toolbar button.import-btn:hover { background: #007c43; }
+    </style>
+</head>
+<body>
+
+    <!-- Controls at top, game directly beneath -->
+    <div id="toolbar">
+        <button onclick="triggerExport()">⬇️ Export Game Save</button>
+        <button class="import-btn" onclick="document.getElementById('savePicker').click()">⬆️ Import Game Save</button>
+        <input type="file" id="savePicker" style="display: none;" accept=".json">
+    </div>
+
+    <!-- CHANGE 'game.html' TO THE FILENAME OF YOUR COPY OF THE GAME -->
+    <iframe id="gameWindow" src="adventure-capitalist.html"></iframe>
+
+    <script>
+        const gameFrame = document.getElementById('gameWindow');
+
+        // REQUEST SAVE PACKAGE FROM IFRAME
+        function triggerExport() {
+            gameFrame.contentWindow.postMessage({ type: 'REQUEST_SAVE' }, '*');
+        }
+
+        // CAPTURE RAW OBJECT PACKAGES FROM INNER ENGINE
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'SAVE_DATA_RESPONSE') {
+                const dataString = JSON.stringify(event.data.payload);
+                
+                const blob = new Blob([dataString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'offline_capitalist_save.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+
+        // HANDLE MANUAL PARSING REGISTERS
+        document.getElementById('savePicker').addEventListener('change', function(e) {
+            if (!e.target.files.length) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const cleanObjectData = JSON.parse(evt.target.result);
+                    
+                    // Directly fire variables into frame memory matrix layers
+                    gameFrame.contentWindow.postMessage({
+                        type: 'LOAD_SAVE',
+                        payload: cleanObjectData
+                    }, '*');
+                    
+                    alert("Save values applied successfully!");
+                } catch(err) {
+                    alert("Error: File format unreadable.");
+                }
+            };
+            reader.readAsText(e.target.files[0]);
+        });
+    </script>
+</body>
+</html>
