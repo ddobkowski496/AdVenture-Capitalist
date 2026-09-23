@@ -103,12 +103,13 @@
 
         function init() {
             const container = document.getElementById('business-container');
+            container.innerHTML = ""; // Clear out existing objects
             businesses.forEach(biz => {
                 const card = document.createElement('div');
                 card.className = 'business-card';
                 card.id = `biz-${biz.id}`;
                 card.innerHTML = `
-                    <div class="left-panel" onclick="startBusiness(${biz.id})", style="cursor:pointer;">
+                    <div class="left-panel" onclick="startBusiness(${biz.id})" style="cursor:pointer;">
                         <div class="icon">${biz.icon}</div>
                         <div class="info">
                             <div class="name">${biz.name} <span class="count" id="count-${biz.id}">x${biz.count}</span></div>
@@ -123,7 +124,6 @@
                 container.appendChild(card);
             });
             updateUI();
-            setInterval(gameLoop, 50); // Frame cycle for fluid progress loading
         }
 
         function updateUI() {
@@ -157,7 +157,7 @@
             if (cash >= biz.cost) {
                 cash -= biz.cost;
                 biz.count++;
-                biz.cost = Math.round(biz.cost * 1.15); // Classic incremental scaling
+                biz.cost = Math.round(biz.cost * 1.15); 
                 updateUI();
             }
         }
@@ -173,14 +173,13 @@
 
         function gameLoop() {
             businesses.forEach(biz => {
-                // If automated by manager and idle, turn it on
                 if (biz.hasManager && !biz.isRunning && biz.count > 0) {
                     biz.isRunning = true;
                     biz.progress = 0;
                 }
 
                 if (biz.isRunning) {
-                    biz.progress += 50; // Milliseconds passed
+                    biz.progress += 50; 
                     let percent = (biz.progress / biz.duration) * 100;
                     
                     if (percent >= 100) {
@@ -194,16 +193,33 @@
                     }
                 }
             });
-            // Keep verification of button triggers active even when idle
-            businesses.forEach(biz => {
-                document.getElementById(`buy-${biz.id}`).disabled = cash < biz.cost;
-                if (!biz.hasManager) {
-                    document.getElementById(`mgr-${biz.id}`).disabled = cash < biz.managerCost || biz.count === 0;
-                }
-            });
         }
 
-        window.onload = init;
+        // === COMMUNICATION PIPELINE FOR OVERLAY INTERFACES ===
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'REQUEST_SAVE') {
+                window.parent.postMessage({
+                    type: 'SAVE_DATA_RESPONSE',
+                    payload: { cash: cash, businesses: businesses }
+                }, '*');
+            }
+            if (event.data.type === 'LOAD_SAVE') {
+                const data = event.data.payload;
+                cash = data.cash || 0;
+                data.businesses.forEach(saved => {
+                    let match = businesses.find(b => b.id === saved.id);
+                    if (match) {
+                        match.count = saved.count;
+                        match.cost = saved.cost;
+                        match.hasManager = saved.hasManager;
+                    }
+                });
+                init();
+            }
+        });
+
+        init();
+        setInterval(gameLoop, 50);
     </script>
 </body>
 </html>
