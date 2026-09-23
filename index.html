@@ -2,40 +2,52 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Adventure Capitalist Offline Launcher</title>
+    <title>Adventure Capitalist Offline Engine</title>
     <style>
-        /* Forces the game to fill the entire window offline */
         body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000;
+            margin: 0; padding: 0; width: 100%; height: 100%; background: #000; color: #fff;
+            font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-        #gameContainer {
-            width: 100%; height: 100%; margin: 0; padding: 0;
+        #setupBox {
+            background: #161b22; padding: 30px; border-radius: 12px; border: 2px solid #d4af37;
+            text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.8); max-width: 400px;
         }
-        iframe {
-            width: 100%; height: 100%; border: none;
+        h2 { color: #d4af37; margin-top: 0; }
+        p { color: #8b949e; font-size: 14px; line-height: 1.4; }
+        .btn {
+            background: #d4af37; color: #123524; border: none; padding: 12px 24px;
+            font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer;
+            text-transform: uppercase; margin-top: 15px; width: 100%; box-sizing: border-box;
         }
-        /* Style for the floating transfer panel */
+        .btn:hover { background: #f3cf55; }
+        #gameRenderZone {
+            width: 100%; height: 100%; display: none; margin: 0; padding: 0; position: absolute; top: 0; left: 0;
+        }
         #saveMenu {
-            position: fixed; bottom: 10px; right: 10px; z-index: 99999;
+            position: fixed; bottom: 10px; right: 10px; z-index: 999999;
             background: rgba(18, 53, 36, 0.95); padding: 8px; border-radius: 6px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: sans-serif;
-            border: 1px solid #d4af37;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 1px solid #d4af37; display: none;
         }
         #saveMenu button {
             background: #d4af37; color: #123524; border: none; padding: 6px 12px;
             cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 4px; margin-left: 5px;
         }
-        #saveMenu button:hover { background: #f3cf55; }
     </style>
 </head>
 <body>
 
-    <!-- Container that holds the game window -->
-    <div id="gameContainer">
-        <iframe id="gameFrame" src="adventure-capitalist.html"></iframe>
+    <!-- Step 1: Launcher Screen -->
+    <div id="setupBox">
+        <h2>Capitalist Engine Launcher</h2>
+        <p>Because browser security blocks offline saves inside iframe windows, you must select the game file once to load it with native save controls enabled.</p>
+        <input type="file" id="gameLoader" accept=".html" style="display: none;">
+        <button class="btn" onclick="document.getElementById('gameLoader').click()">🚀 Boot Game File</button>
     </div>
 
-    <!-- Floating Save/Load Overlay -->
+    <!-- Step 2: The Core Game Rendering Zone -->
+    <div id="gameRenderZone" id="gameView"></div>
+
+    <!-- Floating Save/Load Controls Panel -->
     <div id="saveMenu">
         <button id="exportSave">💰 Export Save</button>
         <button id="importSave">💼 Import Save</button>
@@ -43,70 +55,86 @@
     </div>
 
     <script>
-        // === EXPORT FEATURE ===
-        document.getElementById('exportSave').addEventListener('click', () => {
-            const allData = JSON.stringify(localStorage);
-            
-            if (allData === '{}') {
-                alert('No save data found to export! Buy some businesses first.');
-                return;
-            }
+        let rawGameCode = "";
 
-            const blob = new Blob([allData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            
-            a.href = url;
-            a.download = 'adventure_capitalist_offline_save.json';
-            document.body.appendChild(a);
-            a.click();
-            
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
-
-        // === IMPORT FEATURE ===
-        const filePicker = document.getElementById('filePicker');
-        
-        document.getElementById('importSave').addEventListener('click', () => {
-            filePicker.click();
-        });
-
-        filePicker.addEventListener('change', (e) => {
+        // Core File Booter
+        document.getElementById('gameLoader').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
             reader.onload = function(evt) {
-                try {
-                    const backup = JSON.parse(evt.target.result);
-                    
-                    // 1. Force kill the active game frame instantly by clearing its HTML
-                    const container = document.getElementById('gameContainer');
-                    container.innerHTML = ''; 
-                    
-                    // 2. Clear out existing browser data safely now that the loop is dead
-                    localStorage.clear();
-                    
-                    // 3. Repopulate with the imported game file metrics
-                    for (const key in backup) {
-                        localStorage.setItem(key, backup[key]);
-                    }
-                    
-                    alert('Save injected perfectly! Rebuilding game memory cells...');
-                    
-                    // 4. Clean reload: Create a completely brand new iframe from scratch
-                    const newIframe = document.createElement('iframe');
-                    newIframe.id = 'gameFrame';
-                    newIframe.src = 'adventure-capitalist.html';
-                    container.appendChild(newIframe);
-                    
-                } catch (err) {
-                    alert('Error: This file is not a valid Adventure Capitalist save package.');
-                }
+                rawGameCode = evt.target.result;
+                
+                // Hide Setup, display UI
+                document.getElementById('setupBox').style.display = 'none';
+                document.getElementById('saveMenu').style.display = 'block';
+                
+                const renderZone = document.getElementById('gameRenderZone');
+                renderZone.style.display = 'block';
+
+                // Rewrite document directly to completely destroy frame restrictions
+                document.open();
+                document.write(rawGameCode);
+                
+                // Append Save Panel directly to the body array context natively
+                const menuMarkup = document.createElement('div');
+                menuMarkup.id = 'saveMenu';
+                menuMarkup.style = 'position: fixed; bottom: 10px; right: 10px; z-index: 999999; background: rgba(18, 53, 36, 0.95); padding: 8px; border-radius: 6px; box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 1px solid #d4af37; font-family: sans-serif;';
+                menuMarkup.innerHTML = `
+                    <button id="exportSave" style="background: #d4af37; color: #123524; border: none; padding: 6px 12px; cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 4px;">💰 Export Save</button>
+                    <button id="importSave" style="background: #d4af37; color: #123524; border: none; padding: 6px 12px; cursor: pointer; font-size: 12px; font-weight: bold; border-radius: 4px; margin-left: 5px;">💼 Import Save</button>
+                    <input type="file" id="filePicker" style="display: none;" accept=".json">
+                `;
+                document.body.appendChild(menuMarkup);
+
+                // Re-bind Action Elements to Native DOM Pipeline
+                setupMechanics();
+                document.close();
             };
             reader.readAsText(file);
         });
+
+        function setupMechanics() {
+            // EXPORT UTILITY
+            document.getElementById('exportSave').addEventListener('click', () => {
+                const dataStr = JSON.stringify(localStorage);
+                if (dataStr === '{}') {
+                    alert('No local progress found to extract. Buy some lemonade!');
+                    return;
+                }
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'adventure_capitalist_save.json';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            });
+
+            // IMPORT UTILITY
+            const picker = document.getElementById('filePicker');
+            document.getElementById('importSave').addEventListener('click', () => picker.click());
+
+            picker.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const backup = JSON.parse(evt.target.result);
+                        localStorage.clear();
+                        for (const key in backup) {
+                            localStorage.setItem(key, backup[key]);
+                        }
+                        alert('Save synchronization active! Reloading native application workspace context...');
+                        window.location.reload();
+                    } catch (err) {
+                        alert('Error parsing structural JSON configuration variables.');
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
     </script>
 </body>
 </html>
